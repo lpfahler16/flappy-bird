@@ -1,5 +1,6 @@
 from collections import defaultdict
 from enum import Enum
+import json
 from FlappyBirdModel import FlappyBirdModel
 
 
@@ -50,17 +51,36 @@ class QController:
         return UP if self.Q[(state, UP)] > self.Q[(state, DOWN)] else DOWN  # Observe the default is to fall (both will be 0)
 
     def move(self, action):
+        '''TODO 3:
+        Figure out tick behavior: should only behave every ten ticks?'''
         if action == UP:
             self.model.flap()
         self.model.tick()
         self.update_state()
 
-    def run_experiment(self, num_trials=10000):
+    def Pi(self, state, epsilon):
+        '''TODO 2:
+        Need to discourage flapping when too high and falling when too low.
+        Can be done with simple 
+        `if state[0] > <CLOSE_TO_TOP> return DOWN else if state[0] < <CLOSE_TO_BOTTOM> return UP`'''
+        best = self.best_action(state)
+
+        random = random.choice(list(Action))
+
+        return random.choice([random, best], p=[epsilon, 1-epsilon])
+
+    def save_q(self):
+        print(f"Saving q table - {len(self.Q.items())} elements")
+        with open("q_values.json", "w") as f:
+            json.dump(self.Q, f)
+
+    def run_experiment(self, epsilon=0.25, lam=0.95, num_trials=10000):
         for trial in range(num_trials):
             while not self.model.game_over():
                 s = QController.state_to_tuple(self.state)
                 # Determine the best action according to the q table
-                a = self.best_action(QController.state_to_tuple(self.state))
+                # a = self.best_action(QController.state_to_tuple(self.state))
+                a = self.Pi(s, epsilon)
 
                 self.move(a)
 
@@ -71,9 +91,10 @@ class QController:
 
                 self.Q[(s, a)] = s1_reward + self.Q[(s1, self.best_action(s1))]
 
-        time_survived = 0
+                epsilon *= lam
 
-        '''Will need a way to restart the world (update game state given state in the model)
-        Will iterate through best moves, incrementing time survived at each turn, until death
-        
-        Main question is: is there a way to have more prediction in the q table?'''
+                s = s1
+
+        self.save_q()
+
+        time_survived = 0
