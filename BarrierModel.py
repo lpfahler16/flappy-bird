@@ -7,7 +7,11 @@ BARRIER_VELOCITY = -70
 class BarrierModel:
 
     def __init__(self):
+        self.listeners = []
         self.reset()
+
+    def register(self, listener):
+        self.listeners = self.listeners + [listener]
 
     def tick(self):
         self.x = self.x + BARRIER_VELOCITY*TICK_LENGTH
@@ -17,3 +21,5 @@ class BarrierModel:
     def reset(self):
         self.y = random.randint(0, HEIGHT - BARRIER_HEIGHT)
         self.x = WIDTH
+        for l in self.listeners:
+            l.notify()
